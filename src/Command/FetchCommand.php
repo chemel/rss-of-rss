@@ -2,24 +2,24 @@
 
 namespace App\Command;
 
+use App\Service\XmlParser;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use App\Service\HttpClient;
-use App\Service\XmlParser;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[AsCommand(
     name: 'app:fetch',
     description: 'Add a short description for your command',
 )]
-class FetchCommand{
+class FetchCommand
+{
     public function __construct(
-        protected HttpClient $httpClient,
-        protected XmlParser $xmlParser
-    )
-    {
-
+        private readonly HttpClientInterface $httpClient,
+        private readonly XmlParser $xmlParser,
+    ) {
     }
 
     public function __invoke(
@@ -28,25 +28,35 @@ class FetchCommand{
     ): int {
         $io->note(sprintf('Getting rss of rss from: %s', $url));
 
-        $response = $this->httpClient->get($url);
-        $links = $this->xmlParser->parseXmlLinks($response->getBody()->getContents());
+        $content = $this->httpClient->request('GET', $url)->getContent();
+        $links = $this->xmlParser->parseXmlLinks($content);
 
         $io->success(sprintf('Found %d links', count($links)));
 
+        // Responses are lazy: all requests are sent concurrently, then read in order
+        $responses = [];
         foreach ($links as $link) {
-            $response = $this->httpClient->get($link);
+            $responses[$link] = $this->httpClient->request('GET', $link);
+        }
 
-            if( $response->getStatusCode() === 200) {
-                $io->writeln("<info>[200]</info> " . $link);
+        foreach ($responses as $link => $response) {
+            try {
+                $statusCode = $response->getStatusCode();
+                $html = $response->getContent(false);
+            } catch (TransportExceptionInterface $e) {
+                $io->writeln(sprintf('<error>[ERR]</error> %s (%s)', $link, $e->getMessage()));
+                continue;
             }
-            else {
-                $io->writeln("<error>[{$response->getStatusCode()}]</error> " . $link);
+
+            if ($statusCode !== 200) {
+                $io->writeln(sprintf('<error>[%d]</error> %s', $statusCode, $link));
+                continue;
             }
 
-            $feeds = $this->xmlParser->parseHtmlFeedsUrls($response->getBody()->getContents(), $link);
+            $io->writeln('<info>[200]</info> '.$link);
 
-            foreach ($feeds as $feed) {
-                $io->writeln("\t-> " . $feed);
+            foreach ($this->xmlParser->parseHtmlFeedsUrls($html, $link) as $feed) {
+                $io->writeln("\t-> ".$feed);
             }
         }
 

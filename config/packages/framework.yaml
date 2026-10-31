@@ -5,6 +5,11 @@ framework:
     # Note that the session will be started ONLY if you read or write from it.
     session: true
 
+    http_client:
+        default_options:
+            timeout: 10
+            max_duration: 30
+
     #esi: true
     #fragments: true
 
