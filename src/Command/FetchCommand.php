@@ -12,7 +12,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[AsCommand(
     name: 'app:fetch',
-    description: 'Add a short description for your command',
+    description: 'Récupère les flux RSS référencés par une page « RSS of RSS ».',
 )]
 class FetchCommand
 {
