@@ -10,21 +10,23 @@ class XmlParser
     /**
      * Parse the XML string and extract links from it.
      *
-     * @param string $xmlString The XML string to parse.
-     * @return array An array of links extracted from the XML.
-     * @throws \Exception If the XML cannot be parsed.
+     * @param string $xmlString the XML string to parse
+     *
+     * @return array an array of links extracted from the XML
+     *
+     * @throws \Exception if the XML cannot be parsed
      */
     public function parseXmlLinks($xmlString): array
     {
         $xml = simplexml_load_string($xmlString);
         $links = [];
 
-        if ($xml === false) {
+        if (false === $xml) {
             throw new \Exception('Failed to parse XML');
         }
 
         foreach ($xml->channel->item as $item) {
-            $links[] = (string)$item->link;
+            $links[] = (string) $item->link;
         }
 
         return $links;
@@ -33,10 +35,12 @@ class XmlParser
     /**
      * Parse the HTML string and extract feed URLs from it.
      *
-     * @param string $html The HTML string to parse.
-     * @param string $pageUrl The base URL of the page for resolving relative URLs.
-     * @return array An array of feed URLs extracted from the HTML.
-     * @throws \Exception If the HTML cannot be parsed.
+     * @param string $html    the HTML string to parse
+     * @param string $pageUrl the base URL of the page for resolving relative URLs
+     *
+     * @return array an array of feed URLs extracted from the HTML
+     *
+     * @throws \Exception if the HTML cannot be parsed
      */
     public function parseHtmlFeedsUrls(string $html, string $pageUrl): array
     {
@@ -64,9 +68,9 @@ class XmlParser
 
             if (
                 in_array('alternate', $relations, true)
-                && $type === 'application/rss+xml'
-                && $href !== ''
-                && !preg_match('/comment/i', $title . ' ' . $href)
+                && 'application/rss+xml' === $type
+                && '' !== $href
+                && !preg_match('/comment/i', $title.' '.$href)
             ) {
                 $urls[] = (string) UriResolver::resolve(new Uri($pageUrl), new Uri($href));
             }

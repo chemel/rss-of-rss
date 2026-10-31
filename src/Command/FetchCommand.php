@@ -48,7 +48,7 @@ class FetchCommand
                 continue;
             }
 
-            if ($statusCode !== 200) {
+            if (200 !== $statusCode) {
                 $io->writeln(sprintf('<error>[%d]</error> %s', $statusCode, $link));
                 continue;
             }
