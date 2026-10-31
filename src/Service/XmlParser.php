@@ -68,15 +68,7 @@ class XmlParser
                 && $href !== ''
                 && !preg_match('/comment/i', $title . ' ' . $href)
             ) {
-                if (str_starts_with($href, '/')) {
-                    $href = (string) UriResolver::resolve(new Uri($pageUrl), new Uri($href));
-                }
-
-                if(!str_starts_with($href, 'http')) {
-                    $href = (string) UriResolver::resolve(new Uri($pageUrl), new Uri('/' . ltrim($href, '/')));
-                }
-
-                $urls[] = $href;
+                $urls[] = (string) UriResolver::resolve(new Uri($pageUrl), new Uri($href));
             }
         }
 
