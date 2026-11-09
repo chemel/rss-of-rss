@@ -90,8 +90,7 @@ class XmlParser
                     continue;
                 }
 
-                // Scheme check only: feed URLs may legitimately contain non-ASCII characters
-                if (self::hasHttpScheme($url)) {
+                if (self::isHttpUrl($url)) {
                     $urls[] = $url;
                 }
             }
@@ -100,27 +99,13 @@ class XmlParser
         return $urls;
     }
 
+    /**
+     * Scheme and host check only: URLs may legitimately contain non-ASCII characters.
+     */
     private static function isHttpUrl(string $url): bool
     {
-        return self::hasHttpScheme($url) && false !== filter_var($url, \FILTER_VALIDATE_URL);
-    }
+        $scheme = strtolower((string) parse_url($url, \PHP_URL_SCHEME));
 
-    private static function hasHttpScheme(string $url): bool
-    {
-        $parts = parse_url($url);
-
-        if (!\is_array($parts) || !isset($parts['scheme'], $parts['host'])) {
-            return false;
-        }
-
-        // Brackets are only valid around an IPv6 literal (rejects hosts like "[bad")
-        if (
-            str_contains($parts['host'], '[')
-            && false === filter_var(trim($parts['host'], '[]'), \FILTER_VALIDATE_IP, \FILTER_FLAG_IPV6)
-        ) {
-            return false;
-        }
-
-        return \in_array(strtolower($parts['scheme']), ['http', 'https'], true);
+        return \in_array($scheme, ['http', 'https'], true) && '' !== (string) parse_url($url, \PHP_URL_HOST);
     }
 }
