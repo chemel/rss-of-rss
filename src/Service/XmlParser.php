@@ -2,9 +2,8 @@
 
 namespace App\Service;
 
-use GuzzleHttp\Psr7\Exception\MalformedUriException;
-use GuzzleHttp\Psr7\Uri;
-use GuzzleHttp\Psr7\UriResolver;
+use Symfony\Component\DomCrawler\Crawler;
+use Symfony\Component\DomCrawler\Link;
 
 class XmlParser
 {
@@ -55,38 +54,28 @@ class XmlParser
      * @param string $html    the HTML string to parse
      * @param string $pageUrl the base URL of the page for resolving relative URLs
      *
-     * @return list<string> feed URLs extracted from the HTML
-     *
-     * @throws \Exception if the HTML cannot be parsed
+     * @return list<string> absolute http(s) feed URLs extracted from the HTML
      */
     public function parseHtmlFeedsUrls(string $html, string $pageUrl): array
     {
         $urls = [];
 
-        // DOMDocument::loadHTML() throws a ValueError on an empty string
         if ('' === trim($html)) {
             return $urls;
         }
 
-        $document = new \DOMDocument();
-        $previousErrorSetting = libxml_use_internal_errors(true);
+        // The crawler parses with the native HTML5 parser, detects the charset and honors <base href>
+        $crawler = new Crawler($html, $pageUrl);
 
-        try {
-            $parsed = $document->loadHTML($html);
-        } finally {
-            libxml_clear_errors();
-            libxml_use_internal_errors($previousErrorSetting);
-        }
+        foreach ($crawler->filterXPath('descendant-or-self::link') as $node) {
+            if (!$node instanceof \DOMElement) {
+                continue;
+            }
 
-        if (!$parsed) {
-            throw new \Exception('Failed to parse HTML');
-        }
-
-        foreach ($document->getElementsByTagName('link') as $link) {
-            $relations = preg_split('/\s+/', strtolower(trim($link->getAttribute('rel'))));
-            $type = strtolower(trim($link->getAttribute('type')));
-            $href = trim($link->getAttribute('href'));
-            $title = $link->getAttribute('title');
+            $relations = preg_split('/\s+/', strtolower(trim($node->getAttribute('rel'))));
+            $type = strtolower(trim($node->getAttribute('type')));
+            $href = trim($node->getAttribute('href'));
+            $title = $node->getAttribute('title');
 
             if (
                 in_array('alternate', $relations, true)
@@ -95,10 +84,15 @@ class XmlParser
                 && !preg_match('/comment/i', $title.' '.$href)
             ) {
                 try {
-                    $urls[] = (string) UriResolver::resolve(new Uri($pageUrl), new Uri($href));
-                } catch (MalformedUriException) {
-                    // Skip malformed hrefs instead of aborting the whole page
+                    $url = new Link($node, $crawler->getBaseHref())->getUri();
+                } catch (\InvalidArgumentException|\LogicException) {
+                    // Skip unresolvable hrefs instead of aborting the whole page
                     continue;
+                }
+
+                // Scheme check only: feed URLs may legitimately contain non-ASCII characters
+                if (self::hasHttpScheme($url)) {
+                    $urls[] = $url;
                 }
             }
         }
@@ -108,10 +102,25 @@ class XmlParser
 
     private static function isHttpUrl(string $url): bool
     {
-        $scheme = parse_url($url, \PHP_URL_SCHEME);
+        return self::hasHttpScheme($url) && false !== filter_var($url, \FILTER_VALIDATE_URL);
+    }
 
-        return \is_string($scheme)
-            && \in_array(strtolower($scheme), ['http', 'https'], true)
-            && false !== filter_var($url, \FILTER_VALIDATE_URL);
+    private static function hasHttpScheme(string $url): bool
+    {
+        $parts = parse_url($url);
+
+        if (!\is_array($parts) || !isset($parts['scheme'], $parts['host'])) {
+            return false;
+        }
+
+        // Brackets are only valid around an IPv6 literal (rejects hosts like "[bad")
+        if (
+            str_contains($parts['host'], '[')
+            && false === filter_var(trim($parts['host'], '[]'), \FILTER_VALIDATE_IP, \FILTER_FLAG_IPV6)
+        ) {
+            return false;
+        }
+
+        return \in_array(strtolower($parts['scheme']), ['http', 'https'], true);
     }
 }
