@@ -36,7 +36,12 @@ class FetchCommand
         // Responses are lazy: all requests are sent concurrently, then read in order
         $responses = [];
         foreach ($links as $link) {
-            $responses[$link] = $this->httpClient->request('GET', $link);
+            try {
+                $responses[$link] = $this->httpClient->request('GET', $link);
+            } catch (TransportExceptionInterface $e) {
+                // Thrown synchronously for invalid URLs/options
+                $io->writeln(sprintf('<error>[ERR]</error> %s (%s)', $link, $e->getMessage()));
+            }
         }
 
         foreach ($responses as $link => $response) {
@@ -53,9 +58,16 @@ class FetchCommand
                 continue;
             }
 
+            try {
+                $feeds = $this->xmlParser->parseHtmlFeedsUrls($html, $link);
+            } catch (\Exception $e) {
+                $io->writeln(sprintf('<error>[ERR]</error> %s (%s)', $link, $e->getMessage()));
+                continue;
+            }
+
             $io->writeln('<info>[200]</info> '.$link);
 
-            foreach ($this->xmlParser->parseHtmlFeedsUrls($html, $link) as $feed) {
+            foreach ($feeds as $feed) {
                 $io->writeln("\t-> ".$feed);
             }
         }
