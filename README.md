@@ -1,6 +1,6 @@
 # rss-of-rss
 
-Un petit outil en ligne de commande qui lit un flux RSS, visite chaque lien qu'il contient et liste les flux RSS proposés par les sites visités. Autrement dit : les **flux RSS de flux RSS**.
+Un petit outil en ligne de commande qui lit un flux RSS, visite chaque lien qu'il contient et liste les flux RSS et Atom proposés par les sites visités. Autrement dit : les **flux RSS de flux RSS**.
 
 ## Pourquoi ce projet ?
 
@@ -12,7 +12,7 @@ Rien n'empêche de l'utiliser ailleurs. N'importe quel flux RSS 2.0 dont les art
 
 1. La commande télécharge le flux RSS donné en argument et en extrait les liens (`<item><link>`).
 2. Elle télécharge toutes les pages liées, en parallèle.
-3. Dans chaque page, elle cherche les balises `<link rel="alternate" type="application/rss+xml">` et affiche les flux trouvés. Les flux de commentaires sont ignorés.
+3. Dans chaque page, elle cherche les balises `<link rel="alternate">` de type `application/rss+xml` ou `application/atom+xml` et affiche les flux trouvés. Les flux de commentaires sont ignorés.
 4. Avec l'option `--output`, elle enregistre les URLs des flux trouvés dans un fichier. Avec `--append`, elle complète ce fichier au lieu de l'écraser.
 
 ## Prérequis
@@ -51,7 +51,7 @@ Exemple de sortie :
  [OK] All done.
 ```
 
-- `[200]` : la page a été lue. Les lignes `->` en dessous sont les flux RSS trouvés.
+- `[200]` : la page a été lue. Les lignes `->` en dessous sont les flux RSS et Atom trouvés.
 - `[404]`, `[500]`… : le site a répondu par une erreur.
 - `[ERR]` : le site est injoignable ou n'a pas répondu à temps.
 
@@ -129,6 +129,6 @@ vendor/bin/php-cs-fixer fix
 
 ## Forkez-le !
 
-Ce projet fait une chose simple pour un usage précis, et il a sûrement ses limites. Par exemple, il ne gère pas encore les flux Atom. Si vous avez un autre besoin, **forkez-le** et adaptez-le à votre sauce : exporter les flux en OPML, filtrer par domaine, garder un historique, gérer d'autres formats…
+Ce projet fait une chose simple pour un usage précis, et il a sûrement ses limites. Par exemple, le flux donné en argument doit être du RSS 2.0 : un flux Atom n'est pas encore accepté en entrée. Si vous avez un autre besoin, **forkez-le** et adaptez-le à votre sauce : exporter les flux en OPML, filtrer par domaine, garder un historique, gérer d'autres formats…
 
 Les issues et les pull requests sont aussi les bienvenues.
