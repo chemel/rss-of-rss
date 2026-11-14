@@ -79,7 +79,7 @@ class XmlParser
 
             if (
                 in_array('alternate', $relations, true)
-                && 'application/rss+xml' === $type
+                && in_array($type, ['application/rss+xml', 'application/atom+xml'], true)
                 && '' !== $href
                 && !preg_match('/comment/i', $title.' '.$href)
             ) {
