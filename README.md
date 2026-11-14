@@ -13,6 +13,7 @@ Rien n'empêche de l'utiliser ailleurs. N'importe quel flux RSS 2.0 dont les art
 1. La commande télécharge le flux RSS donné en argument et en extrait les liens (`<item><link>`).
 2. Elle télécharge toutes les pages liées, en parallèle.
 3. Dans chaque page, elle cherche les balises `<link rel="alternate" type="application/rss+xml">` et affiche les flux trouvés. Les flux de commentaires sont ignorés.
+4. Avec l'option `--output`, elle enregistre les URLs des flux trouvés dans un fichier.
 
 ## Prérequis
 
@@ -60,6 +61,23 @@ Pour l'utiliser avec un autre flux, il suffit de changer l'URL :
 php bin/console app:fetch https://exemple.com/rss.xml
 ```
 
+### Sauvegarder les flux dans un fichier
+
+L'option `--output` (ou `-o`) enregistre les URLs des flux trouvés dans un fichier, une par ligne :
+
+```bash
+php bin/console app:fetch https://www.journalduhacker.net/rss --output=feeds.txt
+```
+
+```
+https://exemple-de-blog.fr/feed.xml
+https://autre-blog.org/rss
+```
+
+- Un flux trouvé sur plusieurs pages n'est écrit qu'une seule fois.
+- Le fichier est écrasé à chaque exécution. Les dossiers manquants sont créés.
+- L'affichage dans le terminal reste le même, avec une note finale indiquant le nombre de flux sauvegardés.
+
 ## Développement
 
 Le projet est basé sur Symfony 8.1.
@@ -68,6 +86,14 @@ Le projet est basé sur Symfony 8.1.
 src/
 ├── Command/FetchCommand.php   # la commande app:fetch
 └── Service/XmlParser.php      # lecture du flux RSS et détection des flux dans le HTML
+tests/
+└── Command/FetchCommandTest.php   # test de la commande, avec des réponses HTTP simulées
+```
+
+Pour lancer les tests :
+
+```bash
+php bin/phpunit
 ```
 
 Pour vérifier et corriger le style du code (règles `@Symfony`) :

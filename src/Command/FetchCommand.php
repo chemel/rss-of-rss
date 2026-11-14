@@ -5,8 +5,11 @@ namespace App\Command;
 use App\Service\XmlParser;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Filesystem\Exception\IOException;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -19,12 +22,14 @@ class FetchCommand
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly XmlParser $xmlParser,
+        private readonly Filesystem $filesystem,
     ) {
     }
 
     public function __invoke(
         SymfonyStyle $io,
         #[Argument('Url')] string $url,
+        #[Option('Fichier dans lequel sauvegarder les URLs des flux trouvés (une par ligne)', shortcut: 'o')] ?string $output = null,
     ): int {
         $io->note(sprintf('Getting rss of rss from: %s', $url));
 
@@ -43,6 +48,8 @@ class FetchCommand
                 $io->writeln(sprintf('<error>[ERR]</error> %s (%s)', $link, $e->getMessage()));
             }
         }
+
+        $feedUrls = [];
 
         foreach ($responses as $link => $response) {
             try {
@@ -69,7 +76,22 @@ class FetchCommand
 
             foreach ($feeds as $feed) {
                 $io->writeln("\t-> ".$feed);
+                $feedUrls[$feed] = true;
             }
+        }
+
+        if (null !== $output) {
+            $feedUrls = array_keys($feedUrls);
+
+            try {
+                $this->filesystem->dumpFile($output, [] === $feedUrls ? '' : implode(\PHP_EOL, $feedUrls).\PHP_EOL);
+            } catch (IOException $e) {
+                $io->error(sprintf('Unable to save feed urls to "%s": %s', $output, $e->getMessage()));
+
+                return Command::FAILURE;
+            }
+
+            $io->note(sprintf('Saved %d feed urls to: %s', count($feedUrls), $output));
         }
 
         $io->success('All done.');
