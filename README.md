@@ -13,7 +13,7 @@ Rien n'empêche de l'utiliser ailleurs. N'importe quel flux RSS 2.0 dont les art
 1. La commande télécharge le flux RSS donné en argument et en extrait les liens (`<item><link>`).
 2. Elle télécharge toutes les pages liées, en parallèle.
 3. Dans chaque page, elle cherche les balises `<link rel="alternate" type="application/rss+xml">` et affiche les flux trouvés. Les flux de commentaires sont ignorés.
-4. Avec l'option `--output`, elle enregistre les URLs des flux trouvés dans un fichier.
+4. Avec l'option `--output`, elle enregistre les URLs des flux trouvés dans un fichier. Avec `--append`, elle complète ce fichier au lieu de l'écraser.
 
 ## Prérequis
 
@@ -77,6 +77,31 @@ https://autre-blog.org/rss
 - Un flux trouvé sur plusieurs pages n'est écrit qu'une seule fois.
 - Le fichier est écrasé à chaque exécution. Les dossiers manquants sont créés.
 - L'affichage dans le terminal reste le même, avec une note finale indiquant le nombre de flux sauvegardés.
+
+### Compléter un fichier existant
+
+Ajoutée à `--output`, l'option `--append` (ou `-a`) complète le fichier au lieu de l'écraser :
+
+```bash
+php bin/console app:fetch https://www.journalduhacker.net/rss --output=feeds.txt --append
+```
+
+- Le fichier sert d'historique : les URLs déjà présentes sont conservées, dans leur ordre.
+- Seuls les flux qui n'y figurent pas encore sont ajoutés, à la fin.
+- La note finale indique le nombre de flux ajoutés et le total.
+- Si le fichier n'existe pas encore, il est créé.
+
+`--append` ne s'utilise qu'avec `--output` : seule, la commande s'arrête avec une erreur.
+
+### Mode silencieux
+
+L'option `--quiet` (ou `-q`), fournie par défaut par Symfony, masque l'affichage normal de la commande. Elle est pratique pour une exécution planifiée, par exemple avec cron :
+
+```bash
+php bin/console app:fetch https://www.journalduhacker.net/rss --output=feeds.txt --append --quiet
+```
+
+Le fichier est écrit comme d'habitude, et le code de retour indique toujours si la commande a réussi.
 
 ## Développement
 
