@@ -60,6 +60,55 @@ class FetchCommandTest extends KernelTestCase
         self::assertStringNotContainsString('Saved', $tester->getDisplay());
     }
 
+    public function testAppendOptionKeepsExistingUrlsAndAddsOnlyNewOnes(): void
+    {
+        // No trailing newline and a blank line: the history file may have been edited by hand
+        new Filesystem()->dumpFile($this->outputFile, "https://old.example/rss\n\nhttps://one.example/feed.xml");
+
+        $tester = $this->createTester();
+        $exitCode = $tester->execute([
+            'url' => 'https://rss-of-rss.example/feed.xml',
+            '--output' => $this->outputFile,
+            '--append' => true,
+        ]);
+
+        self::assertSame(Command::SUCCESS, $exitCode);
+        self::assertSame(
+            "https://old.example/rss\nhttps://one.example/feed.xml\nhttps://one.example/other.xml\nhttps://two.example/rss\n",
+            str_replace(\PHP_EOL, "\n", file_get_contents($this->outputFile)),
+        );
+        self::assertStringContainsString('Added 2 new feed urls', $tester->getDisplay());
+        self::assertStringContainsString('(4 in total)', $tester->getDisplay());
+        self::assertStringContainsString('* https://one.example/other.xml', $tester->getDisplay());
+        self::assertStringNotContainsString('* https://one.example/feed.xml', $tester->getDisplay());
+    }
+
+    public function testAppendOptionCreatesTheFileWhenItDoesNotExist(): void
+    {
+        $tester = $this->createTester();
+        $exitCode = $tester->execute([
+            'url' => 'https://rss-of-rss.example/feed.xml',
+            '--output' => $this->outputFile,
+            '--append' => true,
+        ]);
+
+        self::assertSame(Command::SUCCESS, $exitCode);
+        self::assertSame(
+            "https://one.example/feed.xml\nhttps://one.example/other.xml\nhttps://two.example/rss\n",
+            str_replace(\PHP_EOL, "\n", file_get_contents($this->outputFile)),
+        );
+        self::assertStringContainsString('Added 3 new feed urls', $tester->getDisplay());
+    }
+
+    public function testAppendOptionRequiresTheOutputOption(): void
+    {
+        $tester = $this->createTester();
+        $exitCode = $tester->execute(['url' => 'https://rss-of-rss.example/feed.xml', '--append' => true]);
+
+        self::assertSame(Command::INVALID, $exitCode);
+        self::assertStringContainsString('requires the --output option', $tester->getDisplay());
+    }
+
     private function createTester(): CommandTester
     {
         $pages = [
