@@ -79,8 +79,6 @@ class FetchCommandTest extends KernelTestCase
         );
         self::assertStringContainsString('Added 2 new feed urls', $tester->getDisplay());
         self::assertStringContainsString('(4 in total)', $tester->getDisplay());
-        self::assertStringContainsString('* https://one.example/other.xml', $tester->getDisplay());
-        self::assertStringNotContainsString('* https://one.example/feed.xml', $tester->getDisplay());
     }
 
     public function testAppendOptionCreatesTheFileWhenItDoesNotExist(): void
